@@ -223,6 +223,32 @@ sectionRope:NewButton("TP to the end", "Téléporte à la fin du rope", function
     teleportTo(Vector3.new(734, 197, 920))
 end)
 
+sectionRope:NewButton("Freeze Rope", "Fige toute la corde en ancrant tous ses éléments", function()
+    local ropeModel = workspace:FindFirstChild("JumpRope")
+    if ropeModel then
+        local important = ropeModel:FindFirstChild("Important")
+        if important then
+            local ropeContainer = important:FindFirstChild("ropetesting")
+            if ropeContainer then
+                for _, part in pairs(ropeContainer:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.Anchored = true
+                        part.Velocity = Vector3.zero
+                        part.RotVelocity = Vector3.zero
+                    end
+                end
+                print("Corde figée avec succès.")
+            else
+                warn("ropetesting introuvable dans Important.")
+            end
+        else
+            warn("Important introuvable dans JumpRope.")
+        end
+    else
+        warn("JumpRope introuvable dans workspace.")
+    end
+end)
+
 local tabGlass = Window:NewTab("Glass Bridge")
 local sectionGlass = tabGlass:NewSection("Glass Bridge")
 sectionGlass:NewButton("TP to Glass End", "Téléporte à la fin du pont de verre", function()
@@ -234,3 +260,10 @@ local sectionMingle = tabMingle:NewSection("Mingle")
 
 local tabSquid = Window:NewTab("Squid Game")
 local sectionSquid = tabSquid:NewSection("Squid Game")
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.K then
+        lib:ToggleUI()
+    end
+end)
