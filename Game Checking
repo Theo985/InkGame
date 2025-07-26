@@ -3,6 +3,7 @@ local placeId = game.PlaceId
 local scripts = {
     [99567941238278] = "https://raw.githubusercontent.com/Theo985/InkGame/refs/heads/main/Ink%20Game%20Script.lua",
     [126884695634066] = "https://raw.githubusercontent.com/Theo985/InkGame/refs/heads/main/GAG%20Script",
+    [125009265613167] = "https://raw.githubusercontent.com/Theo985/InkGame/refs/heads/main/GAG%20Script",
 }
 
 local scriptURL = scripts[placeId]
