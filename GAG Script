@@ -1,16 +1,13 @@
--- Grow a Garden Script with UI
 -- Services
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
-local mouse = player:GetMouse()
 
 -- UI Library Import
 local lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
 local Window = lib.CreateLib("Grow a Garden | Kondax Panel", "Ocean")
 
--- Variables
 local noclip = false
 RunService.Stepped:Connect(function()
     if noclip and player.Character then
@@ -29,98 +26,87 @@ local function teleportTo(pos)
     end
 end
 
--- UI Sections
 local tabMain = Window:NewTab("Jardinage")
 local sectionFarm = tabMain:NewSection("Fonctions Générales")
 
 sectionFarm:NewButton("TP au jardin", "Téléporte au centre du jardin", function()
-    teleportTo(Vector3.new(0, 3, 0)) -- à adapter si tu connais la position du jardin
+    teleportTo(Vector3.new(0, 3, 0)) -- adapte si besoin
 end)
 
-sectionFarm:NewButton("Collecter automatiquement", "Spam le bouton collect", function()
-    local function spamCollect()
-        while task.wait(0.5) do
-            local collectBtn = player.PlayerGui:FindFirstChild("CollectUI")
-            if collectBtn and collectBtn:FindFirstChild("CollectButton") then
-                fireclickdetector(collectBtn.CollectButton) -- ou :Fire() selon le GUI
-            end
-        end
-    end
-    task.spawn(spamCollect)
-end)
-
-sectionFarm:NewButton("Vitesse x2", "Double la vitesse de déplacement", function()
-    local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-    if hum then
-        hum.WalkSpeed = hum.WalkSpeed * 2
-    end
-end)
-
-sectionFarm:NewButton("Toggle Noclip", "Active/Désactive les collisions", function()
-    noclip = not noclip
-end)
-
-sectionFarm:NewButton("Auto Plant 'Carrot Seed'", "Plante une graine de carotte dans une zone libre", function()
-    local function findSeed()
-        local containers = {player.Backpack, player.Character}
-        for _, container in ipairs(containers) do
-            if container then
-                for _, tool in ipairs(container:GetChildren()) do
-                    if tool:IsA("Tool") and tool.Name:match("^Carrot Seed") then
-                        return tool
-                    end
+-- Trouver la graine "Carrot Seed" dans Backpack ou Character (main)
+local function findSeed()
+    local containers = {player.Backpack, player.Character}
+    for _, container in ipairs(containers) do
+        if container then
+            for _, tool in ipairs(container:GetChildren()) do
+                if tool:IsA("Tool") and tool.Name:match("^Carrot Seed") then
+                    return tool
                 end
             end
         end
-        return nil
     end
+    return nil
+end
 
-    local function findPlantLocations()
-        local plantLocations = {}
-        local base = workspace.Farm.Farm.Important.Plant_Locations
-
-        if base.Can_Plant then
-            for _, spot in ipairs(base.Can_Plant:GetChildren()) do
-                if spot:IsA("BasePart") then
-                    table.insert(plantLocations, spot)
-                end
-            end
+-- Récupérer les 2 spots plantables (parts) dans workspace
+local function getPlantSpots()
+    local spots = {}
+    local base = workspace.Farm.Farm.Important.Plant_Locations
+    local children = base:GetChildren()
+    for _, child in ipairs(children) do
+        if child:IsA("BasePart") then
+            table.insert(spots, child)
+            if #spots >= 2 then break end
         end
-
-        local second = base:GetChildren()[2]
-        if second and second:IsA("Folder") then
-            for _, spot in ipairs(second:GetChildren()) do
-                if spot:IsA("BasePart") then
-                    table.insert(plantLocations, spot)
-                end
-            end
-        end
-
-        return plantLocations
     end
+    return spots
+end
 
+-- Trouver un ClickDetector sur la part plantable
+local function getClickDetector(part)
+    for _, child in ipairs(part:GetChildren()) do
+        if child:IsA("ClickDetector") then
+            return child
+        end
+    end
+    return nil
+end
+
+sectionFarm:NewButton("Auto Plant 'Carrot Seed'", "Prend la graine en main et plante sur un spot", function()
     local seed = findSeed()
     if not seed then
-        warn("Aucune 'Carrot Seed' trouvée dans l'inventaire.")
+        warn("Carrot Seed non trouvée dans le Backpack ni en main.")
         return
     end
 
-    local spots = findPlantLocations()
+    -- Met la graine en main
+    seed.Parent = player.Character
+    task.wait(0.2)
+
+    -- Récupère les emplacements
+    local spots = getPlantSpots()
+    local planted = false
+
     for _, spot in ipairs(spots) do
-        local prompt = spot:FindFirstChildWhichIsA("ProximityPrompt", true)
-        if prompt and prompt.Enabled then
-            player.Character:PivotTo(spot.CFrame + Vector3.new(0, 2, 0))
-            task.wait(0.5)
-            seed.Parent = player.Character
-            fireproximityprompt(prompt)
-            return
+        local clickDetector = getClickDetector(spot)
+        if clickDetector then
+            -- Téléporte le joueur au-dessus du spot
+            teleportTo(spot.Position + Vector3.new(0, 3, 0))
+            task.wait(0.3)
+            -- Simule le clic pour planter
+            clickDetector:FireClick(player.Character or player)
+            print("Planté à l'emplacement:", spot.Name)
+            planted = true
+            break
         end
     end
 
-    warn("Aucun emplacement de plantation libre trouvé.")
+    if not planted then
+        warn("Aucun emplacement plantable avec ClickDetector trouvé.")
+    end
 end)
 
--- ESP basique sur les autres joueurs
+-- ESP basique
 local tabESP = Window:NewTab("ESP")
 local sectionESP = tabESP:NewSection("Visualisation")
 
