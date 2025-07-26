@@ -1,4 +1,5 @@
 -- Grow a Garden Script with UI
+
 -- Services
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -34,7 +35,7 @@ local tabMain = Window:NewTab("Jardinage")
 local sectionFarm = tabMain:NewSection("Fonctions Générales")
 
 sectionFarm:NewButton("TP au jardin", "Téléporte au centre du jardin", function()
-    teleportTo(Vector3.new(0, 3, 0)) -- à adapter si tu connais la position du jardin
+    teleportTo(Vector3.new(0, 3, 0)) -- Adapter si tu connais la vraie position du jardin
 end)
 
 sectionFarm:NewButton("Collecter automatiquement", "Spam le bouton collect", function()
@@ -42,7 +43,7 @@ sectionFarm:NewButton("Collecter automatiquement", "Spam le bouton collect", fun
         while task.wait(0.5) do
             local collectBtn = player.PlayerGui:FindFirstChild("CollectUI")
             if collectBtn and collectBtn:FindFirstChild("CollectButton") then
-                fireclickdetector(collectBtn.CollectButton) -- ou :Fire() selon le GUI
+                fireclickdetector(collectBtn.CollectButton)
             end
         end
     end
@@ -60,10 +61,75 @@ sectionFarm:NewButton("Toggle Noclip", "Active/Désactive les collisions", funct
     noclip = not noclip
 end)
 
--- ESP basique sur les autres joueurs
+sectionFarm:NewButton("Collecte automatique (Prompt)", "Collecte tout ce qui est prêt", function()
+    for _, plant in ipairs(workspace.Farm.Farm.Important.Plants_Physical:GetDescendants()) do
+        if plant:IsA("ProximityPrompt") and plant.Enabled then
+            fireproximityprompt(plant)
+        end
+    end
+end)
+
+sectionFarm:NewButton("Auto Plant 'Carrot Seed'", "Plante une graine de carotte dans une zone libre", function()
+    local function findSeed()
+        local containers = {player.Backpack, player.Character}
+        for _, container in ipairs(containers) do
+            if container then
+                for _, tool in ipairs(container:GetChildren()) do
+                    if tool:IsA("Tool") and tool.Name == "Carrot Seed" then
+                        return tool
+                    end
+                end
+            end
+        end
+        return nil
+    end
+
+    local function findPlantLocation()
+        local plantLocations = {}
+        local base = workspace.Farm.Farm.Important.Plant_Locations
+
+        for _, spot in ipairs(base.Can_Plant:GetChildren()) do
+            if spot:IsA("BasePart") then
+                table.insert(plantLocations, spot)
+            end
+        end
+
+        local second = base:GetChildren()[2]
+        if second and second:IsA("Folder") then
+            for _, spot in ipairs(second:GetChildren()) do
+                if spot:IsA("BasePart") then
+                    table.insert(plantLocations, spot)
+                end
+            end
+        end
+
+        return plantLocations
+    end
+
+    local seed = findSeed()
+    if not seed then
+        warn("Aucune 'Carrot Seed' trouvée dans l'inventaire.")
+        return
+    end
+
+    local spots = findPlantLocation()
+    for _, spot in ipairs(spots) do
+        local prompt = spot:FindFirstChildWhichIsA("ProximityPrompt", true)
+        if prompt and prompt.Enabled then
+            player.Character:PivotTo(spot.CFrame + Vector3.new(0, 2, 0))
+            task.wait(0.5)
+            seed.Parent = player.Character
+            fireproximityprompt(prompt)
+            return
+        end
+    end
+
+    warn("Aucun emplacement de plantation libre trouvé.")
+end)
+
+-- ESP
 local tabESP = Window:NewTab("ESP")
 local sectionESP = tabESP:NewSection("Visualisation")
-
 local espEnabled = false
 local activeESP = {}
 
