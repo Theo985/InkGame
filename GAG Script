@@ -1,0 +1,136 @@
+-- Grow a Garden Script with UI
+-- Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local player = Players.LocalPlayer
+local mouse = player:GetMouse()
+
+-- UI Library Import
+local lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
+local Window = lib.CreateLib("Grow a Garden | Kondax Panel", "Ocean")
+
+-- Variables
+local noclip = false
+RunService.Stepped:Connect(function()
+    if noclip and player.Character then
+        for _, part in ipairs(player.Character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+    end
+end)
+
+local function teleportTo(pos)
+    local char = player.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        char.HumanoidRootPart.CFrame = CFrame.new(pos)
+    end
+end
+
+-- UI Sections
+local tabMain = Window:NewTab("Jardinage")
+local sectionFarm = tabMain:NewSection("Fonctions Générales")
+
+sectionFarm:NewButton("TP au jardin", "Téléporte au centre du jardin", function()
+    teleportTo(Vector3.new(0, 3, 0)) -- à adapter si tu connais la position du jardin
+end)
+
+sectionFarm:NewButton("Collecter automatiquement", "Spam le bouton collect", function()
+    local function spamCollect()
+        while task.wait(0.5) do
+            local collectBtn = player.PlayerGui:FindFirstChild("CollectUI")
+            if collectBtn and collectBtn:FindFirstChild("CollectButton") then
+                fireclickdetector(collectBtn.CollectButton) -- ou :Fire() selon le GUI
+            end
+        end
+    end
+    task.spawn(spamCollect)
+end)
+
+sectionFarm:NewButton("Vitesse x2", "Double la vitesse de déplacement", function()
+    local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+    if hum then
+        hum.WalkSpeed = hum.WalkSpeed * 2
+    end
+end)
+
+sectionFarm:NewButton("Toggle Noclip", "Active/Désactive les collisions", function()
+    noclip = not noclip
+end)
+
+-- ESP basique sur les autres joueurs
+local tabESP = Window:NewTab("ESP")
+local sectionESP = tabESP:NewSection("Visualisation")
+
+local espEnabled = false
+local activeESP = {}
+
+local function clearESP()
+    for _, v in ipairs(activeESP) do
+        if v and v.Parent then
+            v:Destroy()
+        end
+    end
+    activeESP = {}
+end
+
+local function createESP(target)
+    if not target.Character then return end
+    local char = target.Character
+    local color = Color3.fromRGB(0, 255, 0)
+
+    for _, part in ipairs(char:GetChildren()) do
+        if part:IsA("BasePart") then
+            local adorn = Instance.new("BoxHandleAdornment")
+            adorn.Adornee = part
+            adorn.Size = part.Size + Vector3.new(0.1, 0.1, 0.1)
+            adorn.Color3 = color
+            adorn.Transparency = 0.5
+            adorn.AlwaysOnTop = true
+            adorn.ZIndex = 10
+            adorn.Parent = part
+            table.insert(activeESP, adorn)
+        end
+    end
+
+    local head = char:FindFirstChild("Head")
+    if head then
+        local tag = Instance.new("BillboardGui", head)
+        tag.Adornee = head
+        tag.Size = UDim2.new(0, 100, 0, 20)
+        tag.StudsOffset = Vector3.new(0, 2, 0)
+        tag.AlwaysOnTop = true
+
+        local txt = Instance.new("TextLabel", tag)
+        txt.Size = UDim2.new(1, 0, 1, 0)
+        txt.BackgroundTransparency = 1
+        txt.Text = target.Name
+        txt.TextColor3 = color
+        txt.Font = Enum.Font.GothamBold
+        txt.TextScaled = true
+
+        table.insert(activeESP, tag)
+    end
+end
+
+sectionESP:NewToggle("Activer ESP", "Montre les autres joueurs", function(state)
+    espEnabled = state
+    clearESP()
+    if espEnabled then
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= player then
+                createESP(p)
+            end
+        end
+    end
+end)
+
+-- Toggle UI (touche K)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.K then
+        lib:ToggleUI()
+    end
+end)
