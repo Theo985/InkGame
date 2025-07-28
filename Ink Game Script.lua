@@ -12,15 +12,37 @@ local Window = lib.CreateLib("InkGame Kondax Panel", "Ocean")
 
 -- Variables
 local noclip = false
-RunService.Stepped:Connect(function()
-    if noclip and player.Character then
-        for _, part in ipairs(player.Character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
+local antiRagdollFreeze = false
+local noclipConnection
+
+-- Noclip toggle function
+local function toggleNoclip(state)
+    noclip = state
+    if noclip then
+        noclipConnection = RunService.Stepped:Connect(function()
+            if player.Character then
+                for _, part in ipairs(player.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end)
+    else
+        if noclipConnection then
+            noclipConnection:Disconnect()
+            noclipConnection = nil
+        end
+        -- Reset CanCollide on all parts
+        if player.Character then
+            for _, part in ipairs(player.Character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = true
+                end
             end
         end
     end
-end)
+end
 
 local function teleportTo(pos)
     local char = player.Character
@@ -97,12 +119,22 @@ local function createESP(target)
     end
 end
 
+-- Anti-Ragdoll (force Humanoid State back to standing)
+RunService.Stepped:Connect(function()
+    if player.Character and player.Character:FindFirstChild("Humanoid") then
+        local hum = player.Character.Humanoid
+        if hum:GetState() == Enum.HumanoidStateType.Physics then
+            hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+        end
+    end
+end)
+
 -- Tabs and Sections
 local tabControls = Window:NewTab("Controls")
 local sectionControls = tabControls:NewSection("Player")
 
-sectionControls:NewButton("Toggle Noclip", "Active/Désactive les collisions", function()
-    noclip = not noclip
+sectionControls:NewToggle("Toggle Noclip", "Active/Désactive les collisions", function(state)
+    toggleNoclip(state)
 end)
 
 sectionControls:NewButton("Simuler vol (fly)", "Monte le joueur dans les airs", function()
@@ -122,6 +154,68 @@ sectionControls:NewButton("TP to Random Player", "Se téléporter à un joueur a
     if #others > 0 then
         local randomPlayer = others[math.random(1, #others)]
         teleportTo(randomPlayer.Character.HumanoidRootPart.Position)
+    end
+end)
+
+sectionControls:NewButton("Se relever instantanément", "Force le joueur à se lever s'il est ragdoll", function()
+    local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
+    if humanoid then
+        humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+    end
+end)
+
+sectionControls:NewSlider("Speed Hack", "Règle la vitesse du joueur", 100, 16, function(value)
+    local char = player.Character
+    if char and char:FindFirstChild("Humanoid") then
+        char.Humanoid.WalkSpeed = value
+    end
+end)
+
+-- Anti-Ragdoll Freeze toggle
+sectionControls:NewToggle("Anti-Ragdoll Freeze ( not working)", "Détecte chute et freeze le jeu 2 secondes", function(state)
+    antiRagdollFreeze = state
+    if state then
+        coroutine.wrap(function()
+            while antiRagdollFreeze do
+                wait(0.1)
+                local char = player.Character
+                if char and char:FindFirstChild("Humanoid") then
+                    local hum = char.Humanoid
+                    if hum:GetState() == Enum.HumanoidStateType.Physics then
+                        -- Freeze: Disable input, walk speed 0, anchor parts
+                        local UserInputService = game:GetService("UserInputService")
+
+                        local connectionBegan
+                        local connectionEnded
+                        local function blockInput() return Enum.ContextActionResult.Sink end
+
+                        connectionBegan = UserInputService.InputBegan:Connect(blockInput)
+                        connectionEnded = UserInputService.InputEnded:Connect(blockInput)
+
+                        local oldSpeed = hum.WalkSpeed
+                        hum.WalkSpeed = 0
+
+                        for _, part in ipairs(char:GetDescendants()) do
+                            if part:IsA("BasePart") then
+                                part.Anchored = true
+                            end
+                        end
+
+                        wait(2)
+
+                        hum.WalkSpeed = oldSpeed
+                        for _, part in ipairs(char:GetDescendants()) do
+                            if part:IsA("BasePart") then
+                                part.Anchored = false
+                            end
+                        end
+
+                        if connectionBegan then connectionBegan:Disconnect() end
+                        if connectionEnded then connectionEnded:Disconnect() end
+                    end
+                end
+            end
+        end)()
     end
 end)
 
@@ -182,29 +276,32 @@ sectionHide:NewButton("TP to random locked door", "Téléporte devant une porte 
     end
 end)
 
-sectionHide:NewButton("TP to hider", "Téléporte à un joueur sans couteau", function()
+sectionHide:NewButton("TP to hider", "Téléporte à un joueur sans couteau et vivant", function()
     local validTargets = {}
 
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-            local hasKnife = false
+            local humanoid = p.Character:FindFirstChild("Humanoid")
+            if humanoid and humanoid.Health > 0 then
+                local hasKnife = false
 
-            local function check(container)
-                for _, tool in ipairs(container:GetChildren()) do
-                    if tool:IsA("Tool") and tool.Name:lower():find("knife") then
-                        hasKnife = true
-                        break
+                local function check(container)
+                    for _, tool in ipairs(container:GetChildren()) do
+                        if tool:IsA("Tool") and tool.Name:lower():find("knife") then
+                            hasKnife = true
+                            break
+                        end
                     end
                 end
-            end
 
-            pcall(function()
-                check(p:FindFirstChild("Backpack") or {})
-                check(p.Character)
-            end)
+                pcall(function()
+                    check(p:FindFirstChild("Backpack") or {})
+                    check(p.Character)
+                end)
 
-            if not hasKnife then
-                table.insert(validTargets, p)
+                if not hasKnife then
+                    table.insert(validTargets, p)
+                end
             end
         end
     end
@@ -213,7 +310,7 @@ sectionHide:NewButton("TP to hider", "Téléporte à un joueur sans couteau", fu
         local target = validTargets[math.random(1, #validTargets)]
         teleportTo(target.Character.HumanoidRootPart.Position)
     else
-        warn("Aucun joueur sans couteau trouvé.")
+        warn("Aucun joueur sans couteau vivant trouvé.")
     end
 end)
 
@@ -223,47 +320,15 @@ sectionRope:NewButton("TP to the end", "Téléporte à la fin du rope", function
     teleportTo(Vector3.new(734, 197, 920))
 end)
 
-sectionRope:NewButton("Freeze Rope", "Fige toute la corde en ancrant tous ses éléments", function()
-    local ropeModel = workspace:FindFirstChild("JumpRope")
-    if ropeModel then
-        local important = ropeModel:FindFirstChild("Important")
+sectionRope:NewButton("Freeze Rope ( not working)", "Fige la corde en l'ancrant", function()
+    local rope = workspace:FindFirstChild("JumpRope")
+    if rope then
+        local important = rope:FindFirstChild("Important")
         if important then
-            local ropeContainer = important:FindFirstChild("ropetesting")
-            if ropeContainer then
-                for _, part in pairs(ropeContainer:GetDescendants()) do
-                    if part:IsA("BasePart") then
-                        part.Anchored = true
-                        part.Velocity = Vector3.zero
-                        part.RotVelocity = Vector3.zero
-                    end
-                end
-                print("Corde figée avec succès.")
-            else
-                warn("ropetesting introuvable dans Important.")
+            local ropePart = important:FindFirstChild("ropetesting")
+            if ropePart and ropePart:IsA("BasePart") then
+                ropePart.Anchored = true
             end
-        else
-            warn("Important introuvable dans JumpRope.")
         end
-    else
-        warn("JumpRope introuvable dans workspace.")
-    end
-end)
-
-local tabGlass = Window:NewTab("Glass Bridge")
-local sectionGlass = tabGlass:NewSection("Glass Bridge")
-sectionGlass:NewButton("TP to Glass End", "Téléporte à la fin du pont de verre", function()
-    teleportTo(Vector3.new(731, 184, 921))
-end)
-
-local tabMingle = Window:NewTab("Mingle")
-local sectionMingle = tabMingle:NewSection("Mingle")
-
-local tabSquid = Window:NewTab("Squid Game")
-local sectionSquid = tabSquid:NewSection("Squid Game")
-
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.K then
-        lib:ToggleUI()
     end
 end)
