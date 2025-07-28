@@ -1,0 +1,190 @@
+-- Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local player = Players.LocalPlayer
+
+-- Charger Kavo UI
+local lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
+local Window = lib.CreateLib("Pressure | Kondax Hub", "DarkTheme")
+
+-- Animation Flipper-like pour feedback UI
+local function animateButton(button)
+	local tween = TweenService:Create(button, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Size = UDim2.new(0, 160, 0, 55),
+		BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+	})
+	tween:Play()
+end
+
+-- Variables Noclip
+local noclip = false
+local noclipConnection
+
+local function toggleNoclip(state)
+	noclip = state
+	if noclip then
+		noclipConnection = RunService.Stepped:Connect(function()
+			if player.Character then
+				for _, part in ipairs(player.Character:GetDescendants()) do
+					if part:IsA("BasePart") then
+						part.CanCollide = false
+					end
+				end
+			end
+		end)
+	else
+		if noclipConnection then
+			noclipConnection:Disconnect()
+			noclipConnection = nil
+		end
+		if player.Character then
+			for _, part in ipairs(player.Character:GetDescendants()) do
+				if part:IsA("BasePart") then
+					part.CanCollide = true
+				end
+			end
+		end
+	end
+end
+
+-- Fonction Speed Hack
+local function setSpeed(value)
+	local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
+	if humanoid then
+		humanoid.WalkSpeed = value
+	end
+end
+
+-- ESP Doors variables
+local espDoorAdorns = {}
+local espDoorsEnabled = false
+local function clearESPDoors()
+	for _, adorn in ipairs(espDoorAdorns) do
+		if adorn and adorn.Parent then
+			adorn:Destroy()
+		end
+	end
+	espDoorAdorns = {}
+end
+
+local function createESPForDoor(doorPart)
+	if not doorPart or not doorPart:IsA("BasePart") then return end
+
+	local adorn = Instance.new("BoxHandleAdornment")
+	adorn.Adornee = doorPart
+	adorn.Size = doorPart.Size + Vector3.new(0.1, 0.1, 0.1)
+	adorn.Color3 = Color3.fromRGB(0, 255, 0) -- Vert vif
+	adorn.Transparency = 0.5
+	adorn.AlwaysOnTop = true
+	adorn.ZIndex = 10
+	adorn.Parent = game.CoreGui
+
+	table.insert(espDoorAdorns, adorn)
+end
+
+local function scanAndApplyESP()
+	clearESPDoors()
+	for _, model in ipairs(workspace:GetDescendants()) do
+		if model:IsA("Model") and model.Name == "NormalDoor" then
+			local doorPart = model:FindFirstChild("Door")
+			if doorPart then
+				createESPForDoor(doorPart)
+			end
+		end
+	end
+end
+
+local childAddedConn
+local childRemovedConn
+
+local function onChildAdded(child)
+	if child:IsA("Model") and child.Name == "NormalDoor" then
+		local doorPart = child:FindFirstChild("Door")
+		if doorPart then
+			createESPForDoor(doorPart)
+		end
+	end
+end
+
+local function onChildRemoved(child)
+	if child:IsA("Model") and child.Name == "NormalDoor" then
+		scanAndApplyESP() -- On rescan complet pour éviter les orphelins
+	end
+end
+
+local function updateESPDoors(state)
+	espDoorsEnabled = state
+	if espDoorsEnabled then
+		scanAndApplyESP()
+		childAddedConn = workspace.DescendantAdded:Connect(function(desc)
+			if desc:IsA("Model") and desc.Name == "NormalDoor" then
+				local doorPart = desc:FindFirstChild("Door")
+				if doorPart then
+					createESPForDoor(doorPart)
+				end
+			end
+		end)
+		childRemovedConn = workspace.DescendantRemoving:Connect(function(desc)
+			if desc:IsA("Model") and desc.Name == "NormalDoor" then
+				scanAndApplyESP()
+			end
+		end)
+	else
+		if childAddedConn then
+			childAddedConn:Disconnect()
+			childAddedConn = nil
+		end
+		if childRemovedConn then
+			childRemovedConn:Disconnect()
+			childRemovedConn = nil
+		end
+		clearESPDoors()
+	end
+end
+
+-- Onglet Main
+local tab = Window:NewTab("Main")
+local section = tab:NewSection("Actions")
+
+section:NewToggle("Toggle Noclip", "Désactive les collisions", function(state)
+	toggleNoclip(state)
+	-- Animation visuelle
+	local gui = player.PlayerGui:FindFirstChild("KavoUI")
+	if gui then
+		for _, obj in pairs(gui:GetDescendants()) do
+			if obj:IsA("TextButton") and obj.Text:find("Toggle Noclip") then
+				animateButton(obj)
+			end
+		end
+	end
+end)
+
+section:NewSlider("Speed Hack", "Change la vitesse du joueur", 100, 16, function(value)
+	setSpeed(value)
+	-- Animation visuelle
+	local gui = player.PlayerGui:FindFirstChild("KavoUI")
+	if gui then
+		for _, obj in pairs(gui:GetDescendants()) do
+			if obj:IsA("TextButton") and obj.Text:find("Speed Hack") then
+				animateButton(obj)
+			end
+		end
+	end
+end)
+
+-- Onglet Misc
+local miscTab = Window:NewTab("Misc")
+local miscSection = miscTab:NewSection("Extra Tools")
+
+miscSection:NewButton("Infinity Yield", "Exécute le script admin Infinity Yield", function()
+	loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
+end)
+
+-- Onglet ESP
+local espTab = Window:NewTab("ESP")
+local espSection = espTab:NewSection("ESP Doors")
+
+espSection:NewToggle("ESP DOORS", "Montre en vert les 'NormalDoor'", function(state)
+	updateESPDoors(state)
+end)
