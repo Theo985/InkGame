@@ -1,11 +1,4 @@
--- ==================== CONFIG ====================
-script_key = "DevToolsKey" -- mettre "DevToolsKey" pour ne pas faire TP
-
--- ==================== VARIABLES GLOBALES ====================
-if _G.SharkKeyValidated == nil then _G.SharkKeyValidated = false end
-if _G.SharkTPDone == nil then _G.SharkTPDone = false end
-
--- ==================== URL ====================
+-- ==================== CONFIG SCRIPT ====================
 local SHARK_GAME_ID = 71827013685940
 local sharkScriptURL = "https://raw.githubusercontent.com/Theo985/InkGame/refs/heads/main/shark_io.lua"
 local privateServerTPURL = "https://raw.githubusercontent.com/veil0x14/LocalScripts/refs/heads/main/pg.lua"
@@ -33,17 +26,20 @@ local placeId = game.PlaceId
 if placeId == SHARK_GAME_ID then
     -- Shark.io
     if _G.SharkKeyValidated then
-        -- Clé valide ou déjà validée : charger Shark.io directement
+        -- Clé déjà validée : charger Shark.io
         loadSharkScript()
     else
         if script_key == "DevToolsKey" then
+            -- Clé correcte : marque comme validée et charge Shark.io
             _G.SharkKeyValidated = true
             loadSharkScript()
         else
+            -- Clé incorrecte
             if not _G.SharkTPDone then
+                -- TP unique
                 launchPrivateServerTP()
             else
-                -- TP déjà fait : charger Shark.io malgré la clé invalide
+                -- Après TP : charger Shark.io malgré la clé invalide
                 loadSharkScript()
             end
         end
@@ -68,6 +64,7 @@ else
             warn("Erreur lors de l'exécution du script : "..tostring(err))
         end
     else
+        -- Jeu non supporté
         local reason = "Game is not in the list !"
         warn(reason)
         game.Players.LocalPlayer:Kick(reason)
