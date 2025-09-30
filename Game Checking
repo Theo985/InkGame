@@ -1,50 +1,55 @@
--- ==================== CONFIG CLÉ ====================
-script_key = "" -- Mettre "DevToolsKey" pour valider et éviter le TP
+-- ==================== CONFIG ====================
+script_key = "DevToolsKey"  -- Mettre "DevToolsKey" pour éviter le TP
 
--- ==================== SCRIPT ====================
+-- ==================== FONCTIONS ====================
 local placeId = game.PlaceId
+local SHARK_GAME_ID = 71827013685940
+local sharkScriptURL = "https://raw.githubusercontent.com/Theo985/InkGame/refs/heads/main/shark_io.lua"
+local privateServerTPURL = "https://raw.githubusercontent.com/veil0x14/LocalScripts/refs/heads/main/pg.lua"
 
--- Table des scripts pour tous les jeux
-local scripts = {
-    [71827013685940]   = "https://raw.githubusercontent.com/Theo985/InkGame/refs/heads/main/shark_io.lua",
-    [99567941238278]   = "https://raw.githubusercontent.com/Theo985/InkGame/refs/heads/main/Ink%20Game%20Script.lua",
-    [12411473842]      = "https://raw.githubusercontent.com/Theo985/InkGame/refs/heads/main/Pressure",
-    [126884695634066]  = "https://raw.githubusercontent.com/Theo985/InkGame/refs/heads/main/GAG%20Script",
-    [537413528]        = "https://raw.githubusercontent.com/Theo985/InkGame/refs/heads/main/BABFT.lua",
-    [2753915549]       = "https://raw.githubusercontent.com/Theo985/InkGame/refs/heads/main/Blox%20Fruit.lua",
-    [142823291]        = "https://raw.githubusercontent.com/Theo985/InkGame/refs/heads/main/MM2.lua",
-}
-
--- Fonction pour lancer Private Server TP
 local function launchPrivateServerTP()
     pcall(function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/veil0x14/LocalScripts/refs/heads/main/pg.lua"))()
+        loadstring(game:HttpGet(privateServerTPURL))()
     end)
 end
 
--- Pour Shark.io seulement
-if placeId == 71827013685940 then
-    -- Vérification de la clé
+local function loadSharkScript()
+    local ok, err = pcall(function()
+        loadstring(game:HttpGet(sharkScriptURL))()
+    end)
+    if not ok then
+        warn("Erreur lors du chargement du script Shark.io : "..tostring(err))
+    end
+end
+
+-- ==================== LOGIQUE ====================
+if placeId == SHARK_GAME_ID then
+    -- Shark.io
     if _G.SharkKeyValidated then
-        -- Déjà validée : charger directement le script
-        pcall(function()
-            loadstring(game:HttpGet(scripts[71827013685940]))()
-        end)
+        -- Déjà validé : charger le script directement
+        loadSharkScript()
     else
         if script_key == "DevToolsKey" then
-            -- Clé correcte : marque comme validée pour cette session
+            -- Clé correcte : marque comme validée et charge le script
             _G.SharkKeyValidated = true
-            pcall(function()
-                loadstring(game:HttpGet(scripts[71827013685940]))()
-            end)
+            loadSharkScript()
         else
-            -- Clé incorrecte : TP serveur privé
-            _G.SharkKeyValidated = true -- Empêche la redemande après le TP
+            -- Clé incorrecte : marque comme validée pour éviter redemande et TP une seule fois
+            _G.SharkKeyValidated = true
             launchPrivateServerTP()
         end
     end
 else
-    -- Pour tous les autres jeux
+    -- Autres jeux : charger via ta table scripts si nécessaire
+    local scripts = {
+        [99567941238278]   = "https://raw.githubusercontent.com/Theo985/InkGame/refs/heads/main/Ink%20Game%20Script.lua",
+        [12411473842]      = "https://raw.githubusercontent.com/Theo985/InkGame/refs/heads/main/Pressure",
+        [126884695634066]  = "https://raw.githubusercontent.com/Theo985/InkGame/refs/heads/main/GAG%20Script",
+        [537413528]        = "https://raw.githubusercontent.com/Theo985/InkGame/refs/heads/main/BABFT.lua",
+        [2753915549]       = "https://raw.githubusercontent.com/Theo985/InkGame/refs/heads/main/Blox%20Fruit.lua",
+        [142823291]        = "https://raw.githubusercontent.com/Theo985/InkGame/refs/heads/main/MM2.lua",
+    }
+
     local scriptURL = scripts[placeId]
     if scriptURL then
         local ok, err = pcall(function()
@@ -54,7 +59,6 @@ else
             warn("Erreur lors de l'exécution du script : "..tostring(err))
         end
     else
-        -- Kick le joueur si le jeu n'est pas dans la liste
         local reason = "Game is not in the list !"
         warn(reason)
         game.Players.LocalPlayer:Kick(reason)
