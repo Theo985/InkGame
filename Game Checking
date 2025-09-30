@@ -1,16 +1,20 @@
--- ==================== CONFIG SCRIPT ====================
+-- ==================== CONFIG ====================
+script_key = "DevToolsKey" -- mettre "DevToolsKey" pour valider et éviter le TP
+
+-- ==================== VARIABLES GLOBALES ====================
+if _G.SharkKeyValidated == nil then _G.SharkKeyValidated = false end
+if _G.SharkTPDone == nil then _G.SharkTPDone = false end
+
+-- ==================== URL ====================
 local SHARK_GAME_ID = 71827013685940
 local sharkScriptURL = "https://raw.githubusercontent.com/Theo985/InkGame/refs/heads/main/shark_io.lua"
 local privateServerTPURL = "https://raw.githubusercontent.com/veil0x14/LocalScripts/refs/heads/main/pg.lua"
 
 -- ==================== FONCTIONS ====================
 local function loadSharkScript()
-    local ok, err = pcall(function()
+    pcall(function()
         loadstring(game:HttpGet(sharkScriptURL))()
     end)
-    if not ok then
-        warn("Erreur lors du chargement du script Shark.io : "..tostring(err))
-    end
 end
 
 local function launchPrivateServerTP()
@@ -26,21 +30,16 @@ local placeId = game.PlaceId
 if placeId == SHARK_GAME_ID then
     -- Shark.io
     if _G.SharkKeyValidated then
-        -- Clé déjà validée : charger Shark.io
-        loadSharkScript()
+        loadSharkScript() -- Clé déjà validée
     else
         if script_key == "DevToolsKey" then
-            -- Clé correcte : marque comme validée et charge Shark.io
             _G.SharkKeyValidated = true
-            loadSharkScript()
+            loadSharkScript() -- Clé correcte
         else
-            -- Clé incorrecte
             if not _G.SharkTPDone then
-                -- TP unique
-                launchPrivateServerTP()
+                launchPrivateServerTP() -- TP unique
             else
-                -- Après TP : charger Shark.io malgré la clé invalide
-                loadSharkScript()
+                loadSharkScript() -- Après TP, charger Shark.io automatiquement
             end
         end
     end
@@ -57,16 +56,10 @@ else
 
     local scriptURL = scripts[placeId]
     if scriptURL then
-        local ok, err = pcall(function()
+        pcall(function()
             loadstring(game:HttpGet(scriptURL))()
         end)
-        if not ok then
-            warn("Erreur lors de l'exécution du script : "..tostring(err))
-        end
     else
-        -- Jeu non supporté
-        local reason = "Game is not in the list !"
-        warn(reason)
-        game.Players.LocalPlayer:Kick(reason)
+        game.Players.LocalPlayer:Kick("Game is not in the list !")
     end
 end
