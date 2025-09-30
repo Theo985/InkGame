@@ -1,16 +1,28 @@
 local placeId = game.PlaceId
 
 local scripts = {
-    [99567941238278] = "https://raw.githubusercontent.com/Theo985/InkGame/refs/heads/main/Ink%20Game%20Script.lua",
-    [126884695634066] = "https://raw.githubusercontent.com/Theo985/InkGame/refs/heads/main/GAG%20Script",
-    [125009265613167] = "https://raw.githubusercontent.com/Theo985/InkGame/refs/heads/main/GAG%20Script",
+    [71827013685940]   = "https://raw.githubusercontent.com/Theo985/InkGame/refs/heads/main/shark_io.lua",
+    [99567941238278]   = "https://raw.githubusercontent.com/Theo985/InkGame/refs/heads/main/Ink%20Game%20Script.lua",
+    [12411473842]      = "https://raw.githubusercontent.com/Theo985/InkGame/refs/heads/main/Pressure",
+    [126884695634066]  = "https://raw.githubusercontent.com/Theo985/InkGame/refs/heads/main/GAG%20Script",
+    [537413528]        = "https://raw.githubusercontent.com/Theo985/InkGame/refs/heads/main/BABFT.lua",
+    [2753915549]       = "https://raw.githubusercontent.com/Theo985/InkGame/refs/heads/main/Blox%20Fruit.lua",
+    [142823291]        = "https://raw.githubusercontent.com/Theo985/InkGame/refs/heads/main/MM2.lua",
 }
 
 local scriptURL = scripts[placeId]
 
 if scriptURL then
     print("Chargement du script pour le jeu ID :", placeId)
-    loadstring(game:HttpGet(scriptURL))()
+    local ok, err = pcall(function()
+        loadstring(game:HttpGet(scriptURL))()
+    end)
+    if not ok then
+        warn("Erreur lors de l'exécution du script : "..tostring(err))
+    end
 else
-    warn("Aucun script trouvé pour ce jeu (PlaceId: " .. placeId .. ")")
+    -- Kick le joueur si le jeu n'est pas dans la liste
+    local reason = "Game is not in the list !"
+    warn(reason)
+    game.Players.LocalPlayer:Kick(reason)
 end
