@@ -1,6 +1,10 @@
+-- ==================== CONFIG CLÉ ====================
+script_key = "" -- Mettre "DevToolsKey" pour valider et éviter le TP
+
+-- ==================== SCRIPT ====================
 local placeId = game.PlaceId
 
--- Table des scripts
+-- Table des scripts pour tous les jeux
 local scripts = {
     [71827013685940]   = "https://raw.githubusercontent.com/Theo985/InkGame/refs/heads/main/shark_io.lua",
     [99567941238278]   = "https://raw.githubusercontent.com/Theo985/InkGame/refs/heads/main/Ink%20Game%20Script.lua",
@@ -18,67 +22,31 @@ local function launchPrivateServerTP()
     end)
 end
 
+-- Pour Shark.io seulement
 if placeId == 71827013685940 then
-    -- Shark.io
-    if _G.DevKeyValidated then
-        -- Si déjà validé dans une session précédente, charger directement le script
-        local ok, err = pcall(function()
+    -- Vérification de la clé
+    if _G.SharkKeyValidated then
+        -- Déjà validée : charger directement le script
+        pcall(function()
             loadstring(game:HttpGet(scripts[71827013685940]))()
         end)
-        if not ok then
-            warn("Erreur lors du chargement du script : "..tostring(err))
-        end
     else
-        -- Demander la clé
-        local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
-        local Window = Rayfield:CreateWindow({
-            Name = "Shark.io Key Check",
-            LoadingTitle = "Shark.io",
-            LoadingSubtitle = "by Kondax",
-            ConfigurationSaving = { Enabled = false },
-            KeySystem = false
-        })
-
-        local KeyTab = Window:CreateTab("Key", 4483362458)
-
-        KeyTab:CreateTextBox({
-            Name = "Enter Dev Key",
-            PlaceholderText = "Type your key here...",
-            RemoveTextAfterFocusLost = true,
-            Callback = function(text)
-                if text == "DevToolsKey" then -- Remplace par ta clé
-                    _G.DevKeyValidated = true -- marque comme validée
-                    Rayfield:Notify({
-                        Title = "Key Accepted",
-                        Content = "Loading Shark.io script...",
-                        Duration = 3,
-                        Image = 4483362458
-                    })
-                    -- Charger le script principal Shark.io
-                    local ok, err = pcall(function()
-                        loadstring(game:HttpGet(scripts[71827013685940]))()
-                    end)
-                    if not ok then
-                        warn("Erreur lors du chargement du script : "..tostring(err))
-                    end
-                else
-                    Rayfield:Notify({
-                        Title = "Key Incorrect",
-                        Content = "Teleporting to private server...",
-                        Duration = 3,
-                        Image = 4483362458
-                    })
-                    launchPrivateServerTP()
-                end
-            end
-        })
+        if script_key == "DevToolsKey" then
+            -- Clé correcte : marque comme validée pour cette session
+            _G.SharkKeyValidated = true
+            pcall(function()
+                loadstring(game:HttpGet(scripts[71827013685940]))()
+            end)
+        else
+            -- Clé incorrecte : TP serveur privé
+            _G.SharkKeyValidated = true -- Empêche la redemande après le TP
+            launchPrivateServerTP()
+        end
     end
 else
-    -- Autres jeux
+    -- Pour tous les autres jeux
     local scriptURL = scripts[placeId]
-
     if scriptURL then
-        print("Chargement du script pour le jeu ID :", placeId)
         local ok, err = pcall(function()
             loadstring(game:HttpGet(scriptURL))()
         end)
