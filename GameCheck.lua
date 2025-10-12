@@ -52,6 +52,7 @@ else
         [537413528]        = "https://raw.githubusercontent.com/Theo985/InkGame/refs/heads/main/BABFT.lua",
         [2753915549]       = "https://raw.githubusercontent.com/Theo985/InkGame/refs/heads/main/Blox%20Fruit.lua",
         [142823291]        = "https://raw.githubusercontent.com/Theo985/InkGame/refs/heads/main/MM2.lua",
+        [8009328211]        = "https://raw.githubusercontent.com/Theo985/KXScriptDev/refs/heads/main/Raise-Animals",
     }
 
     local scriptURL = scripts[placeId]
