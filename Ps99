@@ -1,0 +1,603 @@
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/x2zu/OPEN-SOURCE-UI-ROBLOX/refs/heads/main/X2ZU%20UI%20ROBLOX%20OPEN%20SOURCE/DummyUi-leak-by-x2zu/fetching-main/Tools/Framework.luau"))()
+
+local Window = Library:Window({
+    Title = "KXScript | Ps99",
+    Desc = "Update! Halloween Event 🎃",
+    Icon = 105059922903197,
+    Theme = "Dark",
+    Config = { Keybind = Enum.KeyCode.LeftControl, Size = UDim2.new(0,700,0,550) },
+    CloseUIButton = { Enabled = true, Text = "KXScript" }
+})
+
+local player = game.Players.LocalPlayer
+local detectedPlotID = nil
+
+local function detectPlotID()
+    local plotsFolder = game:GetService("Workspace"):WaitForChild("__THINGS"):WaitForChild("Plots")
+    for _, plot in pairs(plotsFolder:GetChildren()) do
+        local title = plot:FindFirstChild("Build")
+            and plot.Build:FindFirstChild("Base")
+            and plot.Build.Base:FindFirstChild("Attachment")
+            and plot.Build.Base.Attachment:FindFirstChild("BillboardGui")
+            and plot.Build.Base.Attachment.BillboardGui:FindFirstChild("Title")
+
+        if title and title.Text == player.Name .. "'s Base" then
+            detectedPlotID = tonumber(plot.Name)
+            return detectedPlotID
+        end
+    end
+    return nil
+end
+
+detectPlotID()
+
+local runningKaytun = false
+local kaytunThread
+local eggsOpened = 0
+local currentHouse = 1
+ 
+local eggList = {
+    "Pumpkin Egg",
+    "Grave Egg", 
+    "Bat Egg",
+    "Ghost Egg",    
+    "Cauldron Egg",
+    "Spider Egg",
+    "Reaper Egg",
+    "Coffin Egg"
+}
+
+local function isHouseUnlocked(houseNumber)
+    if not detectedPlotID then return false end
+    local housePath = workspace.__THINGS.Plots[tostring(detectedPlotID)].Build.Houses["House"..houseNumber]
+    return housePath and not housePath:FindFirstChild("Lock")
+end
+
+local function purchaseHouseEggKaytun(houseNumber)
+    if not detectedPlotID then return false end
+    local args = { detectedPlotID, "PurchaseEgg", houseNumber, 1 }
+    local success = pcall(function()
+        game:GetService("ReplicatedStorage"):WaitForChild("Network"):WaitForChild("Plots_Invoke"):InvokeServer(unpack(args))
+    end)
+    return success
+end
+
+local function purchaseHouseEggAuto(houseNumber)
+    if not detectedPlotID then return false end
+    local args = { detectedPlotID, "PurchaseEgg", houseNumber, 3 }
+    local success = pcall(function()
+        game:GetService("ReplicatedStorage"):WaitForChild("Network"):WaitForChild("Plots_Invoke"):InvokeServer(unpack(args))
+    end)
+    return success
+end
+
+local function openEgg(eggName)
+    local args = { eggName, 1 }
+    pcall(function()
+        game:GetService("ReplicatedStorage"):WaitForChild("Network"):WaitForChild("HatchEgg"):InvokeServer(unpack(args))
+    end)
+end
+
+local function purchaseUpgrade(upgradeName)
+    local args = { upgradeName }
+    pcall(function()
+        game:GetService("ReplicatedStorage"):WaitForChild("Network"):WaitForChild("EventUpgrades: Purchase"):InvokeServer(unpack(args))
+    end)
+end
+
+local function kaytunSystem()
+    while runningKaytun do
+        for i = currentHouse, maxHouse do
+            if isHouseUnlocked(i) then
+                currentHouse = i
+                break
+            end
+        end
+        
+        local targetEggs = 0
+        if currentHouse == 1 then
+            targetEggs = 10
+        elseif currentHouse == 2 then
+            targetEggs = 20
+        elseif currentHouse == 3 then
+            targetEggs = 20
+        elseif currentHouse == 4 then
+            targetEggs = 20
+        elseif currentHouse == 5 then
+            targetEggs = 9999
+        end
+        
+        if eggsOpened < targetEggs then
+            local bought = purchaseHouseEggKaytun(currentHouse)
+            if bought then
+                eggsOpened = eggsOpened + 1
+            end
+            
+            if currentHouse <= 4 then
+                purchaseUpgrade("HalloweenCandyMultiplier")
+            end
+            
+        else
+            if currentHouse < 5 then
+                local nextHouse = currentHouse + 1
+                if isHouseUnlocked(nextHouse) then
+                    currentHouse = nextHouse
+                    eggsOpened = 0
+                end
+            else
+                local bought = purchaseHouseEggKaytun(5)
+                if bought then
+                    eggsOpened = eggsOpened + 1
+                end
+                
+                purchaseUpgrade("HalloweenEggLuck")
+                purchaseUpgrade("HalloweenTrickOrTreatLuck")
+                purchaseUpgrade("HalloweenHugeLuck")
+                purchaseUpgrade("HalloweenTitanicLuck")
+            end
+        end
+        
+        for _, eggName in pairs(eggList) do
+            openEgg(eggName)
+        end
+        
+        task.wait(5)
+    end
+end
+
+local PluginTab = Window:Tab({ Title = "Plugin UI", Icon = "plug" })
+PluginTab:Section({ Title = "Plugin Elements" })
+
+local Paragraph = PluginTab:Code({
+    Title="Description j'crois",
+    Code="UI Actif!"
+})
+
+local PlotParagraph = PluginTab:Code({
+    Title = "Detect Plot ID",
+    Code = detectedPlotID and ("Plot ID trouvé : " .. tostring(detectedPlotID)) or "Aucun plot"
+})
+
+local EventTab = Window:Tab({ Title = "Event", Icon = "candy" })
+
+EventTab:Section({ Title = "Kaytun System" })
+
+EventTab:Toggle({
+    Title = "Kaytun System",
+    Desc = "AutoFarm - 5s entre chaque egg",
+    Value = false,
+    Callback = function(state)
+        runningKaytun = state
+        if runningKaytun then
+            Window:Notify({Title="Kaytun", Desc="Kaytun ON! (5s delay)", Time=3})
+            kaytunThread = task.spawn(function()
+                kaytunSystem()
+            end)
+        else
+            Window:Notify({Title="Kaytun", Desc="Kaytun OFF!", Time=3})
+            runningKaytun = false
+        end
+    end
+})
+
+EventTab:Button({
+    Title = "Reset Eggs",
+    Desc = "Egg = 0",
+    Callback = function()
+        eggsOpened = 0
+        Window:Notify({Title="Kaytun", Desc="Egg set to 0", Time=2})
+    end
+})
+
+EventTab:Section({ Title = "Halloween Event Candy" })
+
+local runningCandy = false
+local candyThread
+
+EventTab:Toggle({
+    Title = "Claim Candy",
+    Desc = "Auto Claim Candy",
+    Value = false,
+    Callback = function(state)
+        runningCandy = state
+        if runningCandy then
+            Window:Notify({Title="Claim Candy", Desc="Candy ON", Time=3})
+            candyThread = task.spawn(function()
+                while runningCandy do
+                    for i = 1, 10 do
+                        local args = { i }
+                        pcall(function()
+                            game:GetService("ReplicatedStorage")
+                                :WaitForChild("Network")
+                                :WaitForChild("HalloweenWorld_Claim")
+                                :InvokeServer(unpack(args))
+                        end)
+                    end
+                    task.wait(1)
+                end
+            end)
+        else
+            Window:Notify({Title="Claim Candy", Desc="Candy OFF", Time=3})
+            runningCandy = false
+        end
+    end
+})
+
+EventTab:Section({ Title = "Auto Buy House" })
+
+local runningBuyHouse = false
+local buyHouseThread
+
+local function checkHouseLock(houseNumber)
+    if not detectedPlotID then return false end
+    local housePath = workspace.__THINGS.Plots[tostring(detectedPlotID)].Build.Houses["House"..houseNumber]
+    if housePath and housePath:FindFirstChild("Lock") then
+        return true
+    end
+    return false
+end
+
+EventTab:Toggle({
+    Title = "Auto Buy House",
+    Desc = "House 1-5 auto",
+    Value = false,
+    Callback = function(state)
+        runningBuyHouse = state
+        if runningBuyHouse then
+            if not detectedPlotID then
+                Window:Notify({Title="Erreur", Desc="Aucun Plot ID détecté.", Time=3})
+                return
+            end
+            Window:Notify({Title="Auto Buy House", Desc="Recherche de maisons...", Time=3})
+            buyHouseThread = task.spawn(function()
+                while runningBuyHouse do
+                    for houseNumber = 2, 5 do
+                        if not runningBuyHouse then break end
+                        if checkHouseLock(houseNumber) then
+                            local args = { detectedPlotID, "PurchaseHouse", houseNumber }
+                            pcall(function()
+                                game:GetService("ReplicatedStorage")
+                                    :WaitForChild("Network")
+                                    :WaitForChild("Plots_Invoke")
+                                    :InvokeServer(unpack(args))
+                            end)
+                            task.wait(0.5)
+                        end
+                    end
+                    task.wait(1)
+                end
+            end)
+        else
+            Window:Notify({Title="Auto Buy House", Desc=" Buy House OFF", Time=3})
+            runningBuyHouse = false
+        end
+    end
+})
+
+EventTab:Section({ Title = "Farm Pets" })
+
+local selectedEgg = "Pumpkin Egg"
+local selectedSlot = 1
+local runningFarm = false
+local farmThread
+
+EventTab:Dropdown({
+    Title = "Select Egg",
+    List = eggList,
+    Value = "Pumpkin Egg",
+    Callback = function(choice)
+        selectedEgg = choice
+        Window:Notify({Title="Egg Selected", Desc="Egg Choose  : "..choice, Time=2})
+    end
+})
+
+EventTab:Dropdown({
+    Title = "Select Slot",
+    List = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10"},
+    Value = "1",
+    Callback = function(choice)
+        selectedSlot = tonumber(choice)
+        Window:Notify({Title="Slot Selected", Desc="Slot selected : "..choice, Time=2})
+    end
+})
+
+EventTab:Toggle({
+    Title = "Farm Pets",
+    Desc = "Auto Open EGG",
+    Value = false,
+    Callback = function(state)
+        runningFarm = state
+        if runningFarm then
+            Window:Notify({Title="Farm Pets", Desc="Farm ON - "..selectedEgg.. " (Case "..selectedSlot..")", Time=3})
+            farmThread = task.spawn(function()
+                while runningFarm do
+                    local placeArgs = { selectedSlot, selectedEgg }
+                    pcall(function()
+                        game:GetService("ReplicatedStorage")
+                            :WaitForChild("Network")
+                            :WaitForChild("HalloweenWorld_PlaceEgg")
+                            :InvokeServer(unpack(placeArgs))
+                    end)
+                    task.wait(3)
+                    local pickupArgs = { selectedSlot }
+                    pcall(function()
+                        game:GetService("ReplicatedStorage")
+                            :WaitForChild("Network")
+                            :WaitForChild("HalloweenWorld_PickUp")
+                            :InvokeServer(unpack(pickupArgs))
+                    end)
+                    task.wait(0.5)
+                end
+            end)
+        else
+            Window:Notify({Title="Farm Pets", Desc="Farm OFF", Time=3})
+            runningFarm = false
+        end
+    end
+})
+
+EventTab:Section({ Title = "Purchase House Egg" })
+
+local selectedHouse = 1
+local runningHouse = false
+local houseThread
+
+EventTab:Dropdown({
+    Title = "Select House",
+    List = {"House 1", "House 2", "House 3", "House 4", "House 5"},
+    Value = "House 1",
+    Callback = function(choice)
+        selectedHouse = tonumber(choice:match("%d+")) or 1
+        Window:Notify({Title="House Selected", Desc="House selected "..choice, Time=2})
+    end
+})
+
+EventTab:Toggle({
+    Title = "Purchase House Egg",
+    Desc = "Auto Buy EGG",
+    Value = false,
+    Callback = function(state)
+        runningHouse = state
+        if runningHouse then
+            if not detectedPlotID then
+                Window:Notify({Title="Erreur", Desc="Aucun Plot ID détecté.", Time=3})
+                return
+            end
+            Window:Notify({Title="House Egg", Desc="Auto Purchase ON", Time=3})
+            houseThread = task.spawn(function()
+                while runningHouse do
+                    local args = {
+                        detectedPlotID,
+                        "PurchaseEgg",
+                        selectedHouse,
+                        3
+                    }
+                    pcall(function()
+                        game:GetService("ReplicatedStorage")
+                            :WaitForChild("Network")
+                            :WaitForChild("Plots_Invoke")
+                            :InvokeServer(unpack(args))
+                    end)
+                    task.wait(1)
+                end
+            end)
+        else
+            Window:Notify({Title="House Egg", Desc="Auto Purchase OFF", Time=3})
+            runningHouse = false
+        end
+    end
+})
+
+EventTab:Section({ Title = "Event Upgrades" })
+
+local selectedUpgrade = "HalloweenCandyMultiplier"
+local runningUpgrade = false
+local upgradeThread
+
+local upgradeMap = {
+    ["More candy"] = "HalloweenCandyMultiplier",
+    ["Better hatching luck"] = "HalloweenEggLuck",
+    ["Trick or treat luck"] = "HalloweenTrickOrTreatLuck",
+    ["More diamonds"] = "HalloweenMoreDiamonds",
+    ["More witch hats"] = "HalloweenMoreWitchHats",
+    ["Better huge luck"] = "HalloweenHugeLuck",
+    ["Better titanic luck"] = "HalloweenTitanicLuck"
+}
+
+EventTab:Dropdown({
+    Title = "Select Upgrade",
+    List = {
+        "More candy",
+        "Better hatching luck",
+        "Trick or treat luck",
+        "More diamonds",
+        "More witch hats",
+        "Better huge luck",
+        "Better titanic luck"
+    },
+    Value = "More candy",
+    Callback = function(choice)
+        selectedUpgrade = upgradeMap[choice]
+        Window:Notify({Title="Upgrade Selected", Desc="Upgrade : "..choice, Time=2})
+    end
+})
+
+EventTab:Toggle({
+    Title = "Auto Upgrade",
+    Desc = "Auto Buy Upgrade",
+    Value = false,
+    Callback = function(state)
+        runningUpgrade = state
+        if runningUpgrade then
+            Window:Notify({Title="Auto Upgrade", Desc="Auto Upgrade ON", Time=3})
+            upgradeThread = task.spawn(function()
+                while runningUpgrade do
+                    local args = { selectedUpgrade }
+                    pcall(function()
+                        game:GetService("ReplicatedStorage")
+                            :WaitForChild("Network")
+                            :WaitForChild("EventUpgrades: Purchase")
+                            :InvokeServer(unpack(args))
+                    end)
+                    task.wait(1)
+                end
+            end)
+        else
+            Window:Notify({Title="Auto Upgrade", Desc="Auto Upgrade OFF", Time=3})
+            runningUpgrade = false
+        end
+    end
+})
+
+local ESPTab = Window:Tab({ Title = "ESP", Icon = "eye" })
+ESPTab:Section({ Title = "Debris ESP" })
+
+local runningESP = false
+local espThread
+local espObjects = {}
+
+local function isTouchingPlotPart(debrisPart)
+    if not detectedPlotID then return false end
+    
+    local plot = workspace.__THINGS.Plots:FindFirstChild(tostring(detectedPlotID))
+    if not plot then return false end
+    
+    local insideFolder = plot.Build:FindFirstChild("Inside")
+    if not insideFolder then return false end
+    
+    for _, plotPart in pairs(insideFolder:GetChildren()) do
+        if plotPart:IsA("Part") then
+            local plotPos = plotPart.Position
+            local plotSize = plotPart.Size
+            local debrisPos = debrisPart.Position
+            local debrisSize = debrisPart.Size
+            
+            local distanceX = math.abs(plotPos.X - debrisPos.X)
+            local distanceY = math.abs(plotPos.Y - debrisPos.Y)
+            local distanceZ = math.abs(plotPos.Z - debrisPos.Z)
+            
+            local maxDistanceX = (plotSize.X + debrisSize.X) / 2
+            local maxDistanceY = (plotSize.Y + debrisSize.Y) / 2
+            local maxDistanceZ = (plotSize.Z + debrisSize.Z) / 2
+            
+            if distanceX <= maxDistanceX and distanceY <= maxDistanceY and distanceZ <= maxDistanceZ then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+local function createESP(debrisPart, text)
+    if espObjects[debrisPart] then
+        return
+    end
+    
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "ESP_Pet"
+    billboard.Adornee = debrisPart
+    billboard.Size = UDim2.new(0, 250, 0, 70)
+    billboard.StudsOffset = Vector3.new(0, 4, 0)
+    billboard.AlwaysOnTop = true
+    billboard.MaxDistance = 150
+    billboard.Parent = debrisPart
+    
+    local frame = Instance.new("Frame")
+    frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    frame.BackgroundTransparency = 0.2
+    frame.Size = UDim2.new(1, 0, 1, 0)
+    frame.BorderSizePixel = 0
+    frame.Parent = billboard
+    
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Text = text
+    textLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+    textLabel.TextSize = 16
+    textLabel.Font = Enum.Font.GothamBold
+    textLabel.BackgroundTransparency = 1
+    textLabel.Size = UDim2.new(1, 0, 1, 0)
+    textLabel.Parent = frame
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = frame
+    
+    espObjects[debrisPart] = billboard
+    return billboard
+end
+
+local function clearESP()
+    for _, esp in pairs(espObjects) do
+        esp:Remove()
+    end
+    espObjects = {}
+end
+
+local function updateESP()
+    if not runningESP then return end
+    if not detectedPlotID then return end
+    
+    clearESP()
+    
+    for _, debrisModel in pairs(workspace.__DEBRIS:GetChildren()) do
+        local debrisPart = debrisModel:FindFirstChild(debrisModel.Name)
+        if debrisPart and debrisPart:IsA("BasePart") then
+            if isTouchingPlotPart(debrisPart) then
+                local petInfo = {
+                    name = "Inconnu",
+                    displayName = "Inconnu"
+                }
+                
+                local innerModel = debrisModel:FindFirstChild(debrisModel.Name)
+                if innerModel then
+                    local halloweenPet = innerModel:FindFirstChild("HalloweenPet")
+                    if halloweenPet then
+                        local frame = halloweenPet:FindFirstChild("Frame")
+                        if frame then
+                            local displayName = frame:FindFirstChild("DisplayName")
+                            if displayName then
+                                petInfo.name = displayName.Text
+                                petInfo.displayName = displayName.Text
+                            end
+                        end
+                    end
+                end
+                
+                createESP(debrisPart, petInfo.name)
+            end
+        end
+    end
+end
+
+ESPTab:Toggle({
+    Title = "Pets ESP",
+    Desc = "ESP PETS IN PLOT",
+    Value = false,
+    Callback = function(state)
+        runningESP = state
+        if runningESP then
+            Window:Notify({Title="ESP", Desc="ESP activé", Time=3})
+            espThread = task.spawn(function()
+                while runningESP do
+                    updateESP()
+                    task.wait(0.3)
+                end
+            end)
+        else
+            Window:Notify({Title="ESP", Desc="ESP désactivé", Time=3})
+            clearESP()
+            runningESP = false
+        end
+    end
+})
+
+ESPTab:Button({
+    Title = "Refresh ESP",
+    Desc = "update esp",
+    Callback = function()
+        if runningESP then
+            updateESP()
+            Window:Notify({Title="ESP", Desc="ESP updated", Time=2})
+        end
+    end
+})
